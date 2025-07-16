@@ -3,11 +3,11 @@ import shutil
 import logging
 from pathlib import Path
 import git
-from app.config import settings
 
 logging.basicConfig(level=logging.INFO)
 
 def clone_repo(repo_url: str, repo_id: str) -> Path:
+    from app.config import settings
     """
     Clones a repository into WORK_DIR/{repo_id}.
 
