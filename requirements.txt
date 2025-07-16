@@ -1,2 +1,4 @@
 GitPython
 pydantic-settings
+pika
+tenacity

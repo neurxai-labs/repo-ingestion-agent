@@ -7,3 +7,8 @@ class Repository(BaseModel):
 class CodeChunk(BaseModel):
     content: str
     repository: Repository
+
+
+class ChunkMessage(BaseModel):
+    repo_url: str
+    chunk: CodeChunk
