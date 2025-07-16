@@ -1,3 +1,7 @@
-# Placeholder for main.py
-if __name__ == "__main__":
-    print("Repository Ingestion Agent")
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/")
+def read_root():
+    return {"Hello": "World"}
