@@ -1,14 +1,31 @@
-# Placeholder for models.py
-from pydantic import BaseModel
+from pydantic import BaseModel, HttpUrl, constr
 
-class Repository(BaseModel):
-    url: str
+class RepoRegister(BaseModel):
+    """
+    Represents a request to register a repository for processing.
 
-class CodeChunk(BaseModel):
-    content: str
-    repository: Repository
-
+    Example:
+    {
+        "repo_url": "https://github.com/example/repo",
+        "repo_id": "example-repo"
+    }
+    """
+    repo_url: HttpUrl
+    repo_id: constr(regex='^[a-zA-Z0-9_-]+$')
 
 class ChunkMessage(BaseModel):
-    repo_url: str
-    chunk: CodeChunk
+    """
+    Represents a chunk of a file from a repository.
+
+    Example:
+    {
+        "repo_id": "example-repo",
+        "file_path": "src/main.py",
+        "offset": 1024,
+        "chunk_text": "def hello_world():\\n    print(\\"Hello, World!\\")"
+    }
+    """
+    repo_id: str
+    file_path: str
+    offset: int
+    chunk_text: str
