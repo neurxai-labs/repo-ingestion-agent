@@ -1,10 +1,18 @@
-# Placeholder for chunker.py
-def chunk_code(file_path):
+from pathlib import Path
+from typing import Iterator, Tuple
+
+def chunk_file(file_path: Path, max_bytes: int) -> Iterator[Tuple[int, bytes]]:
     """
-    Chunks a code file into smaller pieces.
+    Reads a file in byte-length slices of up to max_bytes, yielding (offset, chunk_bytes).
+    Skips binary vs. text appropriately and normalizes line endings.
     """
-    print(f"Chunking {file_path}...")
-    # This is a placeholder. In a real implementation, you would
-    # split the code into meaningful chunks (e.g., functions, classes).
-    with open(file_path, 'r') as f:
-        return [f.read()]
+    with open(file_path, 'rb') as f:
+        content = f.read()
+    if b'\x00' in content:
+        return
+    content = content.replace(b'\r\n', b'\n')
+    offset = 0
+    while offset < len(content):
+        chunk = content[offset:offset+max_bytes]
+        yield offset, chunk
+        offset += len(chunk)
