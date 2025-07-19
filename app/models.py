@@ -1,3 +1,4 @@
+from typing import Pattern
 from pydantic import BaseModel, HttpUrl, constr, Field
 
 class RepoRegister(BaseModel):
@@ -12,6 +13,19 @@ class RepoRegister(BaseModel):
     """
     repo_url: HttpUrl
     repo_id: constr = Field(..., pattern='^[a-zA-Z0-9_-]+$')
+
+class Repository(BaseModel):
+    """
+    Represents a repository.
+    """
+    url: HttpUrl
+
+class CodeChunk(BaseModel):
+    """
+    Represents a chunk of code from a repository.
+    """
+    content: str
+    repository: Repository
 
 class ChunkMessage(BaseModel):
     """

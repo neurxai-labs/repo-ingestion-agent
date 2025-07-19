@@ -20,7 +20,12 @@ def test_publish_chunk_success(mocker):
 
     repo = Repository(url="http://test.com/repo.git")
     chunk = CodeChunk(content="test content", repository=repo)
-    msg = ChunkMessage(repo_url=repo.url, chunk=chunk)
+    msg = ChunkMessage(
+        repo_id="test-repo",
+        file_path="test_file.py",
+        offset=0,
+        chunk_text="test content",
+    )
 
     publish_chunk(msg)
 
@@ -43,7 +48,12 @@ def test_publish_chunk_failure(mocker):
 
     repo = Repository(url="http://test.com/repo.git")
     chunk = CodeChunk(content="test content", repository=repo)
-    msg = ChunkMessage(repo_url=repo.url, chunk=chunk)
+    msg = ChunkMessage(
+        repo_id="test-repo",
+        file_path="test_file.py",
+        offset=0,
+        chunk_text="test content",
+    )
 
     publish_chunk(msg)
 
