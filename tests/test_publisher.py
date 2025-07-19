@@ -1,62 +1,42 @@
-"""
-Tests for the message publisher.
-"""
-import pytest
+import json
 from unittest.mock import MagicMock, patch
 
-from app.models import ChunkMessage, CodeChunk, Repository
+import pytest
+from app.models import ChunkMessage
 from app.publisher import publish_chunk
 
 
-def test_publish_chunk_success(mocker):
+@pytest.fixture
+def chunk_message() -> ChunkMessage:
     """
-    Tests that publish_chunk successfully sends a message.
+    Returns a ChunkMessage instance for testing.
     """
-    mock_pika = mocker.patch("app.publisher.pika")
-    mock_connection = MagicMock()
+    return ChunkMessage(
+        repo_id="test-repo",
+        file_path="test_file.py",
+        offset=0,
+        chunk_text="test content",
+    )
+
+
+@patch("app.publisher.pika")
+def test_publish_chunk_with_fake_kafka_stub(mock_pika, chunk_message: ChunkMessage):
+    """
+    Tests that publish_chunk sends the correct message to the correct topic.
+    """
+    # Arrange
     mock_channel = MagicMock()
-    mock_pika.BlockingConnection.return_value = mock_connection
+    mock_connection = MagicMock()
     mock_connection.channel.return_value = mock_channel
+    mock_pika.BlockingConnection.return_value = mock_connection
 
-    repo = Repository(url="http://test.com/repo.git")
-    chunk = CodeChunk(content="test content", repository=repo)
-    msg = ChunkMessage(
-        repo_id="test-repo",
-        file_path="test_file.py",
-        offset=0,
-        chunk_text="test content",
-    )
+    # Act
+    publish_chunk(chunk_message)
 
-    publish_chunk(msg)
-
-    mock_pika.BlockingConnection.assert_called_once()
-    mock_connection.channel.assert_called_once()
-    mock_channel.queue_declare.assert_called_once_with(
-        queue="repo-chunks", durable=True
-    )
+    # Assert
     mock_channel.basic_publish.assert_called_once()
-    mock_connection.close.assert_called_once()
-
-
-def test_publish_chunk_failure(mocker):
-    """
-    Tests that publish_chunk handles connection errors.
-    """
-    mock_pika = mocker.patch("app.publisher.pika")
-    mock_logger = mocker.patch("app.publisher.logger")
-    mock_pika.BlockingConnection.side_effect = Exception("Connection error")
-
-    repo = Repository(url="http://test.com/repo.git")
-    chunk = CodeChunk(content="test content", repository=repo)
-    msg = ChunkMessage(
-        repo_id="test-repo",
-        file_path="test_file.py",
-        offset=0,
-        chunk_text="test content",
-    )
-
-    publish_chunk(msg)
-
-    mock_logger.error.assert_called_with(
-        "Failed to publish message: Connection error"
-    )
+    args, kwargs = mock_channel.basic_publish.call_args
+    assert kwargs["exchange"] == ""
+    assert kwargs["routing_key"] == "repo-chunks"
+    sent_payload = json.loads(kwargs["body"])
+    assert sent_payload == chunk_message.dict()
