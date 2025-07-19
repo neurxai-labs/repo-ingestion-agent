@@ -1,4 +1,4 @@
-from pydantic import BaseModel, HttpUrl, constr
+from pydantic import BaseModel, HttpUrl, constr, Field
 
 class RepoRegister(BaseModel):
     """
@@ -11,7 +11,7 @@ class RepoRegister(BaseModel):
     }
     """
     repo_url: HttpUrl
-    repo_id: constr(regex='^[a-zA-Z0-9_-]+$')
+    repo_id: constr = Field(..., pattern='^[a-zA-Z0-9_-]+$')
 
 class ChunkMessage(BaseModel):
     """
