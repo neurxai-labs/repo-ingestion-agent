@@ -10,12 +10,12 @@ from starlette.responses import JSONResponse
 from starlette.status import HTTP_202_ACCEPTED
 from prometheus_client import start_http_server, Counter, Histogram
 
-from app.chunker import chunk_file
-from app.clone import clone_repo
-from app.config import settings
-from app.models import RepoRegister, ChunkMessage
-from app.publisher import publish_chunk
-from app.logging_config import configure_logging
+from .chunker import chunk_file
+from .clone import clone_repo
+from .config import settings
+from .models import RepoRegister, ChunkMessage
+from .publisher import publish_chunk
+from .logging_config import configure_logging
 
 configure_logging(settings.LOG_LEVEL)
 logger = logging.getLogger(__name__)
@@ -121,7 +121,7 @@ def start():
     import uvicorn
     start_http_server(settings.PROM_METRICS_PORT)
     uvicorn.run(
-        "app.main:app",
+        "main:app",
         host="0.0.0.0",
         port=settings.PORT,
         log_config=None,

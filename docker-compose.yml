@@ -1,6 +1,6 @@
 version: '3.8'
 services:
-  agent:
+  repository-agent:
     build:
       context: .
       dockerfile: Dockerfile
@@ -11,6 +11,9 @@ services:
       - WORK_DIR=/tmp/workdir
       - MAX_CHUNK_SIZE=1024
       - PORT=8000
+      - CLONE_ROOT=${CLONE_ROOT}
+    volumes:
+      - ${CLONE_ROOT}:${CLONE_ROOT}
     depends_on:
       - rabbitmq
   rabbitmq:
