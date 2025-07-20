@@ -11,7 +11,6 @@ from pika.exceptions import AMQPConnectionError, ChannelError
 from app.config import settings
 from app.models import ChunkMessage
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -39,15 +38,27 @@ def publish_chunk(msg: ChunkMessage, max_retries: int = 3, backoff_factor: float
                 ),
             )
             connection.close()
-            logger.info("Message published successfully.")
+            logger.info(
+                "Message published successfully",
+                extra={"repo_id": msg.repo_id, "file_path": msg.file_path, "offset": msg.offset},
+            )
             return
         except (AMQPConnectionError, ChannelError) as e:
-            logger.warning(f"Connection/Channel error: {e}. Retrying...")
+            logger.warning(
+                "Connection/Channel error, retrying...",
+                extra={"repo_id": msg.repo_id, "error": str(e), "retry_count": retries},
+            )
             retries += 1
             if retries >= max_retries:
-                logger.error("Failed to publish message after multiple retries.")
+                logger.error(
+                    "Failed to publish message after multiple retries",
+                    extra={"repo_id": msg.repo_id, "error": str(e)},
+                )
                 raise
             time.sleep(backoff_factor * (2 ** retries))
         except Exception as e:
-            logger.error(f"Failed to publish message: {e}")
+            logger.error(
+                "Failed to publish message",
+                extra={"repo_id": msg.repo_id, "error": str(e)},
+            )
             raise

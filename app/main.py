@@ -2,6 +2,7 @@ import logging
 import os
 from pathlib import Path
 import sys
+import time
 print('sys.path:', sys.path)
 
 from fastapi import FastAPI, BackgroundTasks
@@ -14,8 +15,9 @@ from app.clone import clone_repo
 from app.config import settings
 from app.models import RepoRegister, ChunkMessage
 from app.publisher import publish_chunk
+from app.logging_config import configure_logging
 
-logging.basicConfig(level=logging.INFO)
+configure_logging(settings.LOG_LEVEL)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
@@ -31,12 +33,19 @@ def background_worker(repo: RepoRegister):
     """
     Background worker to clone repo, chunk files, and publish messages.
     """
+    start_time = time.time()
     try:
         repo_path = clone_repo(repo.repo_url, repo.repo_id)
-        logger.info(f"Successfully cloned repo to {repo_path}")
+        logger.info(
+            "Successfully cloned repo",
+            extra={"repo_id": repo.repo_id, "repo_url": repo.repo_url, "path": str(repo_path)},
+        )
         REPOS_PROCESSED_TOTAL.inc()
     except Exception as e:
-        logger.error(f"Error cloning repo {repo.repo_url}: {e}")
+        logger.error(
+            "Error cloning repo",
+            extra={"repo_id": repo.repo_id, "repo_url": repo.repo_url, "error": str(e)},
+        )
         return
 
     for file_path in Path(repo_path).rglob("*"):
@@ -53,13 +62,38 @@ def background_worker(repo: RepoRegister):
                         )
                         publish_chunk(chunk_message)
                         CHUNKS_PUBLISHED_TOTAL.inc()
-                        logger.info(f"Published chunk for {file_path} at offset {offset}")
+                        logger.info(
+                            "Published chunk",
+                            extra={
+                                "repo_id": repo.repo_id,
+                                "file_path": str(file_path),
+                                "offset": offset,
+                            },
+                        )
                     except UnicodeDecodeError:
-                        logger.warning(f"Could not decode file {file_path} as UTF-8. Skipping.")
+                        logger.warning(
+                            "Could not decode file as UTF-8",
+                            extra={"repo_id": repo.repo_id, "file_path": str(file_path)},
+                        )
                     except Exception as e:
-                        logger.error(f"Error publishing chunk for {file_path}: {e}")
+                        logger.error(
+                            "Error publishing chunk",
+                            extra={
+                                "repo_id": repo.repo_id,
+                                "file_path": str(file_path),
+                                "error": str(e),
+                            },
+                        )
             except Exception as e:
-                logger.error(f"Error chunking file {file_path}: {e}")
+                logger.error(
+                    "Error chunking file",
+                    extra={"repo_id": repo.repo_id, "file_path": str(file_path), "error": str(e)},
+                )
+    duration_ms = (time.time() - start_time) * 1000
+    logger.info(
+        "Finished processing repo",
+        extra={"repo_id": repo.repo_id, "duration_ms": duration_ms},
+    )
 
 
 @app.get("/")
@@ -80,8 +114,20 @@ async def register_repo(repo: RepoRegister, background_tasks: BackgroundTasks):
     )
 
 
-if __name__ == "__main__":
+def start():
+    """
+    Starts the uvicorn server.
+    """
     import uvicorn
-
     start_http_server(settings.PROM_METRICS_PORT)
-    uvicorn.run(app, host="0.0.0.0", port=settings.PORT)
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=settings.PORT,
+        log_config=None,
+        reload=True,
+    )
+
+
+if __name__ == "__main__":
+    start()

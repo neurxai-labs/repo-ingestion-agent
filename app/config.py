@@ -5,6 +5,15 @@ from pydantic_settings import BaseSettings
 from pydantic import Field
 
 
+class LogSettings(BaseSettings):
+    """
+    Logging settings.
+    """
+    log_level: str = Field(
+        default="INFO",
+        description="The log level for the application.",
+    )
+
 class Settings(BaseSettings):
     """
     Application settings.
@@ -29,6 +38,10 @@ class Settings(BaseSettings):
     PROM_METRICS_PORT: int = Field(
         default=8001,
         description="The port to expose Prometheus metrics on.",
+    )
+    LOG_LEVEL: str = Field(
+        default="INFO",
+        description="The log level for the application.",
     )
 
     class Config:

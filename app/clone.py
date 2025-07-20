@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 import git
 
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def clone_repo(repo_url: str, repo_id: str) -> Path:
     from app.config import settings
@@ -16,13 +16,22 @@ def clone_repo(repo_url: str, repo_id: str) -> Path:
     local_path = Path(settings.WORK_DIR) / repo_id
     try:
         if local_path.exists():
-            logging.info(f"Directory {local_path} already exists. Deleting and re-cloning.")
+            logger.info(
+                "Directory already exists, deleting and re-cloning",
+                extra={"repo_id": repo_id, "path": str(local_path)},
+            )
             shutil.rmtree(local_path)
         
-        logging.info(f"Cloning {repo_url} to {local_path}...")
+        logger.info(
+            "Cloning repository",
+            extra={"repo_id": repo_id, "repo_url": repo_url, "path": str(local_path)},
+        )
         git.Repo.clone_from(repo_url, local_path)
-        logging.info("Cloning complete.")
+        logger.info("Finished cloning", extra={"repo_id": repo_id})
         return local_path
     except Exception as e:
-        logging.error(f"Failed to clone repository: {e}")
+        logger.error(
+            "Failed to clone repository",
+            extra={"repo_id": repo_id, "repo_url": repo_url, "error": str(e)},
+        )
         raise

@@ -1,3 +1,4 @@
 pytest
 fastapi
 httpx<0.24.0
+python-json-logger

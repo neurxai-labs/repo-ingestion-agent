@@ -5,3 +5,4 @@ GitPython
 pydantic-settings
 pika
 prometheus-client
+python-json-logger
