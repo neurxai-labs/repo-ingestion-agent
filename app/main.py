@@ -7,6 +7,7 @@ print('sys.path:', sys.path)
 from fastapi import FastAPI, BackgroundTasks
 from starlette.responses import JSONResponse
 from starlette.status import HTTP_202_ACCEPTED
+from prometheus_client import start_http_server, Counter, Histogram
 
 from app.chunker import chunk_file
 from app.clone import clone_repo
@@ -19,7 +20,13 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
+# Prometheus metrics
+REPOS_PROCESSED_TOTAL = Counter("repos_processed_total", "Total number of repositories processed")
+CHUNKS_PUBLISHED_TOTAL = Counter("chunks_published_total", "Total number of chunks published")
+REPO_PROCESS_SECONDS = Histogram("repo_process_seconds", "Time spent processing a repository")
 
+
+@REPO_PROCESS_SECONDS.time()
 def background_worker(repo: RepoRegister):
     """
     Background worker to clone repo, chunk files, and publish messages.
@@ -27,6 +34,7 @@ def background_worker(repo: RepoRegister):
     try:
         repo_path = clone_repo(repo.repo_url, repo.repo_id)
         logger.info(f"Successfully cloned repo to {repo_path}")
+        REPOS_PROCESSED_TOTAL.inc()
     except Exception as e:
         logger.error(f"Error cloning repo {repo.repo_url}: {e}")
         return
@@ -44,6 +52,7 @@ def background_worker(repo: RepoRegister):
                             chunk_text=chunk_text,
                         )
                         publish_chunk(chunk_message)
+                        CHUNKS_PUBLISHED_TOTAL.inc()
                         logger.info(f"Published chunk for {file_path} at offset {offset}")
                     except UnicodeDecodeError:
                         logger.warning(f"Could not decode file {file_path} as UTF-8. Skipping.")
@@ -74,4 +83,5 @@ async def register_repo(repo: RepoRegister, background_tasks: BackgroundTasks):
 if __name__ == "__main__":
     import uvicorn
 
+    start_http_server(settings.PROM_METRICS_PORT)
     uvicorn.run(app, host="0.0.0.0", port=settings.PORT)

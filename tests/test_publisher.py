@@ -1,6 +1,7 @@
 import json
 from unittest.mock import MagicMock, patch
 
+import pika
 import pytest
 from app.models import ChunkMessage
 from app.publisher import publish_chunk
@@ -39,4 +40,29 @@ def test_publish_chunk_with_fake_kafka_stub(mock_pika, chunk_message: ChunkMessa
     assert kwargs["exchange"] == ""
     assert kwargs["routing_key"] == "repo-chunks"
     sent_payload = json.loads(kwargs["body"])
-    assert sent_payload == chunk_message.dict()
+    assert sent_payload == chunk_message.model_dump()
+
+
+@patch("app.publisher.pika")
+@patch("app.publisher.time.sleep", return_value=None)
+def test_publish_chunk_with_retry(mock_sleep, mock_pika, chunk_message: ChunkMessage):
+    """
+    Tests that publish_chunk retries on connection failure.
+    """
+    # Arrange
+    mock_channel = MagicMock()
+    mock_connection = MagicMock()
+    mock_connection.channel.return_value = mock_channel
+    mock_pika.BlockingConnection.side_effect = [
+        pika.exceptions.AMQPConnectionError,
+        pika.exceptions.AMQPConnectionError,
+        mock_connection,
+    ]
+
+    # Act
+    with pytest.raises(Exception):
+        publish_chunk(chunk_message, max_retries=2)
+
+    # Assert
+    assert mock_pika.BlockingConnection.call_count == 2
+    mock_channel.basic_publish.assert_not_called()

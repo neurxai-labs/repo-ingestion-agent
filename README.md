@@ -27,3 +27,28 @@ You can then check the logs of the container to see the output of the cloning, c
 ```bash
 docker logs <container_id>
 ```
+
+## Load Testing with Locust
+
+This directory contains a Locust load test for the repository processing service.
+
+### Running the Load Test
+
+1.  Install Locust:
+
+    ```bash
+    pip install locust
+    ```
+
+2.  Run the load test:
+
+    ```bash
+    locust -f loadtests/locustfile.py --host http://localhost:8000
+    ```
+
+3.  Open a web browser and navigate to `http://localhost:8089` to start the load test.
+
+
+## Monitoring
+
+The service exposes Prometheus metrics on the `/metrics` endpoint on port `8001` by default. You can scrape this endpoint with a Prometheus server to monitor the service.

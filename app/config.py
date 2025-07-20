@@ -26,6 +26,10 @@ class Settings(BaseSettings):
         default=8000,
         description="The port to run the web server on.",
     )
+    PROM_METRICS_PORT: int = Field(
+        default=8001,
+        description="The port to expose Prometheus metrics on.",
+    )
 
     class Config:
         """
