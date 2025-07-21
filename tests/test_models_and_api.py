@@ -29,9 +29,11 @@ def test_register_repo_valid_payload():
     """
     client = TestClient(app)
     with patch("app.main.background_worker"):
-        response = client.post("/register-repo", json={"repo_url": "https://github.com/test/repo", "repo_id": "test-repo"})
+        response = client.post("/register-repo", json={"repo_url": "https://github.com/test/repo"})
         assert response.status_code == 202
-        assert response.json() == {"message": "Repository registration accepted."}
+        data = response.json()
+        assert data["status"] == "accepted"
+        assert len(data["repo_id"]) == 32
 
 
 def test_register_repo_invalid_payload():
@@ -39,5 +41,5 @@ def test_register_repo_invalid_payload():
     Tests that the /register-repo endpoint returns a 422 on an invalid payload.
     """
     client = TestClient(app)
-    response = client.post("/register-repo", json={"repo_url": "not-a-url", "repo_id": "test-repo"})
+    response = client.post("/register-repo", data={"repo_url": "not-a-url"})
     assert response.status_code == 422

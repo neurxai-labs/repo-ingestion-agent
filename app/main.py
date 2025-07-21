@@ -3,17 +3,14 @@ import os
 from pathlib import Path
 import sys
 import time
+import asyncio
+from collections import deque
 print('sys.path:', sys.path)
-
-import logging
-import os
-from pathlib import Path
-import sys
-import time
-from fastapi import FastAPI, BackgroundTasks, Depends
+from fastapi import FastAPI, BackgroundTasks, Depends, Request, Form
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from starlette.responses import JSONResponse
-from starlette.status import HTTP_202_ACCEPTED
+from starlette.responses import JSONResponse, HTMLResponse, RedirectResponse, StreamingResponse
+from starlette.status import HTTP_202_ACCEPTED, HTTP_302_FOUND
 from prometheus_client import start_http_server, Counter, Histogram
 from app.chunker import chunk_file
 from app.clone import clone_repo
@@ -22,9 +19,14 @@ from app.database import db
 from app.models import RepoRegister, ChunkMessage, Outbox
 from app.publisher import publisher_worker, CHUNKS_PUBLISHED_TOTAL
 from app.logging_config import configure_logging
-configure_logging(settings.LOG_LEVEL)
+from logging.handlers import QueueHandler
+import queue
+
+log_queue = queue.Queue()
+configure_logging(settings.LOG_LEVEL, handler=QueueHandler(log_queue))
 logger = logging.getLogger(__name__)
 app = FastAPI()
+templates = Jinja2Templates(directory="app/templates")
 REPOS_PROCESSED_TOTAL = Counter(
     "repos_processed_total", "Total number of repositories processed"
 )
@@ -110,26 +112,37 @@ def background_worker(repo: RepoRegister, db_session: Session):
     )
 
 
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 
 @app.post("/register-repo", status_code=HTTP_202_ACCEPTED)
 async def register_repo(
-    repo: RepoRegister,
+    payload: RepoRegister,
     background_tasks: BackgroundTasks,
     db_session: Session = Depends(db.get_db),
 ):
     """
     Endpoint to register a repository for processing.
     """
-    logger.info(f"Received request to register repo: {repo.repo_url}")
-    background_tasks.add_task(background_worker, repo, db_session)
-    return JSONResponse(
-        content={"message": "Repository registration accepted."},
-        status_code=HTTP_202_ACCEPTED,
-    )
+    repo_id = payload.generate_id()
+    logger.info(f"Received request to register repo: {payload.repo_url}")
+    background_tasks.add_task(background_worker, payload, db_session)
+    return {"repo_id": repo_id, "status": "accepted"}
+
+
+async def log_streamer():
+    while True:
+        try:
+            log_record = log_queue.get_nowait()
+            yield f"data: {log_record.getMessage()}\\n\\n"
+        except queue.Empty:
+            await asyncio.sleep(0.1)
+
+@app.get("/logs")
+async def logs():
+    return StreamingResponse(log_streamer(), media_type="text/event-stream")
 
 
 def start():

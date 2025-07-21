@@ -1,7 +1,11 @@
 from sqlalchemy import Column, Integer, String, Text, create_engine, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from pydantic import BaseModel, HttpUrl, Field
+from typing import Optional
+import uuid
+
 Base = declarative_base()
+
 class Outbox(Base):
     __tablename__ = "outbox"
     id = Column(Integer, primary_key=True, index=True)
@@ -10,18 +14,24 @@ class Outbox(Base):
     offset = Column(Integer, nullable=False)
     chunk_text = Column(Text, nullable=False)
     __table_args__ = (UniqueConstraint("repo_id", "file_path", "offset", name="uix_1"),)
+
 class RepoRegister(BaseModel):
     """
     Represents a request to register a repository for processing.
 
     Example:
     {
-        "repo_url": "https://github.com/example/repo",
-        "repo_id": "example-repo"
+        "repo_url": "https://github.com/example/repo"
     }
     """
     repo_url: HttpUrl
-    repo_id: str = Field(..., pattern='^[a-zA-Z0-9_-]+$')
+    repo_id: Optional[str] = None
+
+    def generate_id(self) -> str:
+        if self.repo_id:
+            return self.repo_id
+        self.repo_id = uuid.uuid4().hex
+        return self.repo_id
 
 class Repository(BaseModel):
     """

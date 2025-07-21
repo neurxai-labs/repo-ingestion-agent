@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Repo Ingestion Agent</title>
+</head>
+<body>
+    <h1>Repo Ingestion Agent</h1>
+    <form id="repo-form">
+        <label for="repo_url">Repository URL:</label>
+        <input type="text" id="repo_url" name="repo_url" size="50">
+        <input type="submit" value="Submit">
+    </form>
+    <hr>
+    <h2>Logs</h2>
+    <pre id="logs"></pre>
+
+    <script>
+        const repoForm = document.getElementById('repo-form');
+        const logs = document.getElementById('logs');
+
+        repoForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(repoForm);
+            const repo_url = formData.get('repo_url');
+
+            const response = await fetch('/register-repo', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ repo_url })
+            });
+
+            const data = await response.json();
+            alert(`Repository registered with ID: ${data.repo_id}`);
+        });
+
+        const eventSource = new EventSource('/logs');
+
+        eventSource.onmessage = function(event) {
+            logs.innerHTML += event.data + '<br>';
+        };
+    </script>
+</body>
+</html>

@@ -2,13 +2,18 @@ import logging
 import sys
 from pythonjsonlogger import jsonlogger
 
-def configure_logging(log_level="INFO"):
+def configure_logging(log_level="INFO", handler=None):
     """
     Configures logging to output JSON.
     """
     logger = logging.getLogger()
     logger.setLevel(log_level)
-    logHandler = logging.StreamHandler(sys.stdout)
+    
+    if handler:
+        logHandler = handler
+    else:
+        logHandler = logging.StreamHandler(sys.stdout)
+
     formatter = jsonlogger.JsonFormatter(
         fmt="%(asctime)s %(name)s %(levelname)s %(message)s"
     )

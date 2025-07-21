@@ -14,12 +14,11 @@ def test_register_repo_schedules_task():
     """
     # Arrange
     repo_url = "https://example.com/foo.git"
-    repo_id = "foo-id"
     with patch("app.main.background_worker") as mock_background_worker:
         # Act
-        response = client.post("/register-repo", json={"repo_url": repo_url, "repo_id": repo_id})
+        response = client.post("/register-repo", json={"repo_url": repo_url})
 
         # Assert
         assert response.status_code == 202
-        assert response.json() == {"message": "Repository registration accepted."}
+        assert response.json()["status"] == "accepted"
         mock_background_worker.assert_called_once()
