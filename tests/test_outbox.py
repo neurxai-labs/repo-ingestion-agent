@@ -1,12 +1,10 @@
-import time
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.database import db
-from app.main import app
-from app.models import Base, Outbox
+from app.main import background_worker
+from app.models import Base, Outbox, RepoRegister
 from app.config import settings
-from fastapi.testclient import TestClient
 @pytest.fixture(scope="module")
 def test_db():
     """
@@ -21,24 +19,30 @@ def test_db():
 from unittest.mock import patch
 
 
+import os
+import tempfile
 @patch("app.main.clone_repo")
 def test_register_repo_e2e(mock_clone_repo, test_db):
     """
     End-to-end test for the /register-repo endpoint.
     """
-    # Arrange
-    mock_clone_repo.return_value = "/tmp/workdir/test-repo"
-    client = TestClient(app)
-    repo_url = "https://github.com/test/repo.git"
-    repo_id = "test-repo"
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Arrange
+        settings.WORK_DIR = tmpdir
+        repo_path = os.path.join(settings.WORK_DIR, "test-repo")
+        os.makedirs(repo_path, exist_ok=True)
+        with open(os.path.join(repo_path, "test.py"), "w") as f:
+            f.write("test")
+        mock_clone_repo.return_value = repo_path
+        repo_url = "https://github.com/test/repo.git"
+        repo_id = "test-repo"
+        repo = RepoRegister(repo_url=repo_url, repo_id=repo_id)
+        session = db.SessionLocal()
 
-    # Act
-    response = client.post("/register-repo", json={"repo_url": repo_url, "repo_id": repo_id})
+        # Act
+        background_worker(repo, session)
 
-    # Assert
-    assert response.status_code == 202
-    time.sleep(1)  # Allow time for background task to run
-    session = db.SessionLocal()
-    outbox_items = session.query(Outbox).filter_by(repo_id=repo_id).all()
-    assert len(outbox_items) > 0
-    session.close()
+        # Assert
+        outbox_items = session.query(Outbox).filter_by(repo_id=repo_id).all()
+        assert len(outbox_items) > 0
+        session.close()

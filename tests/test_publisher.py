@@ -47,22 +47,14 @@ def test_publish_chunk_with_fake_kafka_stub(mock_pika, chunk_message: ChunkMessa
 @patch("app.publisher.time.sleep", return_value=None)
 def test_publish_chunk_with_retry(mock_sleep, mock_pika, chunk_message: ChunkMessage):
     """
-    Tests that publish_chunk retries on connection failure.
+    Tests that publish_chunk retries on connection failure and eventually raises an exception.
     """
     # Arrange
-    mock_channel = MagicMock()
-    mock_connection = MagicMock()
-    mock_connection.channel.return_value = mock_channel
-    mock_pika.BlockingConnection.side_effect = [
-        pika.exceptions.AMQPConnectionError,
-        pika.exceptions.AMQPConnectionError,
-        mock_connection,
-    ]
+    mock_pika.BlockingConnection.side_effect = pika.exceptions.AMQPConnectionError
 
-    # Act
-    with pytest.raises(Exception):
-        publish_chunk(chunk_message, max_retries=2)
+    # Act & Assert
+    with pytest.raises(pika.exceptions.AMQPConnectionError):
+        publish_chunk(chunk_message, max_retries=3)
 
-    # Assert
-    assert mock_pika.BlockingConnection.call_count == 2
-    mock_channel.basic_publish.assert_not_called()
+    assert mock_pika.BlockingConnection.call_count == 3
+    assert mock_sleep.call_count == 3

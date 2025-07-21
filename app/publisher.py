@@ -48,20 +48,20 @@ def publish_chunk(msg: ChunkMessage, max_retries: int = 3, backoff_factor: float
                 "Connection/Channel error, retrying...",
                 extra={"repo_id": msg.repo_id, "error": str(e), "retry_count": retries},
             )
+            time.sleep(backoff_factor * (2**retries))
             retries += 1
             if retries >= max_retries:
                 logger.error(
                     "Failed to publish message after multiple retries",
                     extra={"repo_id": msg.repo_id, "error": str(e)},
                 )
-                raise
-            time.sleep(backoff_factor * (2**retries))
+                raise e
         except Exception as e:
             logger.error(
                 "Failed to publish message",
                 extra={"repo_id": msg.repo_id, "error": str(e)},
             )
-            raise
+            raise e
 def publisher_worker():
     """
     Worker to publish messages from the outbox.
