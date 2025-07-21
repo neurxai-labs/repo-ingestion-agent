@@ -1,9 +1,15 @@
-try:
-    from typing import Pattern
-except ImportError:
-    from re import Pattern
+from sqlalchemy import Column, Integer, String, Text, create_engine, UniqueConstraint
+from sqlalchemy.ext.declarative import declarative_base
 from pydantic import BaseModel, HttpUrl, Field
-
+Base = declarative_base()
+class Outbox(Base):
+    __tablename__ = "outbox"
+    id = Column(Integer, primary_key=True, index=True)
+    repo_id = Column(String, nullable=False)
+    file_path = Column(String, nullable=False)
+    offset = Column(Integer, nullable=False)
+    chunk_text = Column(Text, nullable=False)
+    __table_args__ = (UniqueConstraint("repo_id", "file_path", "offset", name="uix_1"),)
 class RepoRegister(BaseModel):
     """
     Represents a request to register a repository for processing.

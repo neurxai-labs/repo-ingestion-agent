@@ -43,6 +43,10 @@ class Settings(BaseSettings):
         default="INFO",
         description="The log level for the application.",
     )
+    DATABASE_URL: str = Field(
+        default="sqlite:///./repo_ingestion.db",
+        description="The URL of the database.",
+    )
 
     class Config:
         """
