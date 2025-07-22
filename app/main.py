@@ -5,7 +5,6 @@ import sys
 import time
 import asyncio
 from collections import deque
-print('sys.path:', sys.path)
 from fastapi import FastAPI, BackgroundTasks, Depends, Request, Form
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
