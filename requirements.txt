@@ -6,3 +6,5 @@ pydantic-settings
 pika
 prometheus-client
 python-json-logger
+jinja2
+sqlalchemy

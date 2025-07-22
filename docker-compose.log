@@ -1,0 +1,2 @@
+time="2025-07-22T12:02:52+05:30" level=warning msg="D:\\Github\\repo-ingestion-agent\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+unable to get image 'bitnami/kafka:latest': error during connect: Get "http://%2F%2F.%2Fpipe%2FdockerDesktopLinuxEngine/v1.51/images/bitnami/kafka:latest/json": open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified.
